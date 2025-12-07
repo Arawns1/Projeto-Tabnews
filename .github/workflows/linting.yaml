@@ -1,9 +1,9 @@
-name: Automated Tests
+name: Linting
 
 on: pull_request
 jobs:
   jest:
-    name: Jest Ubuntu
+    name: Prettier
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,4 +21,4 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - run: pnpm test
+      - run: pnpm run lint:prettier:check
