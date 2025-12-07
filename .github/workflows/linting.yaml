@@ -2,7 +2,7 @@ name: Linting
 
 on: pull_request
 jobs:
-  jest:
+  prettier:
     name: Prettier
     runs-on: ubuntu-latest
     steps:
@@ -22,3 +22,23 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - run: pnpm run lint:prettier:check
+  ESLint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/hydrogen"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - run: pnpm run lint:eslint:check
