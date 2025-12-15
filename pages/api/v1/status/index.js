@@ -1,43 +1,49 @@
+import { createRouter } from "next-connect";
 import database from "infra/database.js";
-import { InternalServerError } from "infra/errors.js";
+import { InternalServerError, MethodNotAllowedError } from "infra/errors.js";
 
-async function status(request, response) {
-  try {
-    const updatedAt = new Date().toISOString();
-    const dbVersionResult = await database.query("SHOW server_version;");
-    const dbVersionValue = dbVersionResult.rows[0].server_version;
+const router = createRouter();
+router.get(getHandler);
+export default router.handler({
+  onNoMatch: onNoMatchHandler,
+  onError: onErrorHandler,
+});
 
-    const dbMaxConnectionsResult = await database.query(
-      "SHOW max_connections;",
-    );
-    const dbMaxConnectionsValue =
-      dbMaxConnectionsResult.rows[0].max_connections;
+async function getHandler(request, response) {
+  const updatedAt = new Date().toISOString();
+  const dbVersionResult = await database.query("SHOW server_version;");
+  const dbVersionValue = dbVersionResult.rows[0].server_version;
 
-    const dbName = process.env.POSTGRES_DB;
-    const dbOpenConnectionsResult = await database.query({
-      text: `SELECT count(*)::int FROM pg_stat_activity WHERE datname = $1;`,
-      values: [dbName],
-    });
-    const dbOpenConnectionsValue = dbOpenConnectionsResult.rows[0].count;
+  const dbMaxConnectionsResult = await database.query("SHOW max_connections;");
+  const dbMaxConnectionsValue = dbMaxConnectionsResult.rows[0].max_connections;
 
-    response.status(200).json({
-      updated_at: updatedAt,
-      dependencies: {
-        database: {
-          max_connections: parseInt(dbMaxConnectionsValue),
-          opened_connections: dbOpenConnectionsValue,
-          version: dbVersionValue,
-        },
+  const dbName = process.env.POSTGRES_DB;
+  const dbOpenConnectionsResult = await database.query({
+    text: `SELECT count(*)::int FROM pg_stat_activity WHERE datname = $1;`,
+    values: [dbName],
+  });
+  const dbOpenConnectionsValue = dbOpenConnectionsResult.rows[0].count;
+
+  response.status(200).json({
+    updated_at: updatedAt,
+    dependencies: {
+      database: {
+        max_connections: parseInt(dbMaxConnectionsValue),
+        opened_connections: dbOpenConnectionsValue,
+        version: dbVersionValue,
       },
-    });
-  } catch (error) {
-    const publicErrorObject = new InternalServerError({
-      cause: error,
-    });
-    console.log("\n Erro dentro do catch do controller:");
-    console.error(publicErrorObject);
-    response.status(500).json(publicErrorObject);
-  }
+    },
+  });
 }
 
-export default status;
+function onNoMatchHandler(request, response) {
+  const publicErrorObject = new MethodNotAllowedError();
+  response.status(publicErrorObject.statusCode).json(publicErrorObject);
+}
+
+function onErrorHandler(error, request, response) {
+  const publicErrorObject = new InternalServerError({ cause: error });
+  console.log("\n Erro dentro do onErrorHandler do next-connect:");
+  console.error(publicErrorObject);
+  response.status(publicErrorObject.statusCode).json(publicErrorObject);
+}
