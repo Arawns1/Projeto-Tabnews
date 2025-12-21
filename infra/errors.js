@@ -77,9 +77,30 @@ class ValidationError extends Error {
   }
 }
 
+class NotFoundError extends Error {
+  constructor({ cause, message, action }) {
+    super(message || "Recurso não encontrado.", {
+      cause,
+    });
+    this.name = "NotFoundError";
+    this.action = action || "Verifique os dados enviados.";
+    this.statusCode = 404;
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      action: this.action,
+      status_code: this.statusCode,
+    };
+  }
+}
+
 export {
   InternalServerError,
   MethodNotAllowedError,
   ServiceError,
   ValidationError,
+  NotFoundError,
 };
